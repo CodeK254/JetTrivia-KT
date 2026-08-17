@@ -1,17 +1,14 @@
 package com.tamara.jettrivia.screens
 
-import android.util.Log
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.tamara.jettrivia.component.Questions
 import com.tamara.jettrivia.data.DataOrException
-import com.tamara.jettrivia.model.Question
 import com.tamara.jettrivia.model.QuestionModel
 import com.tamara.jettrivia.repository.QuestionRepository
-import com.tamara.jettrivia.util.Constants
+import com.tamara.jettrivia.util.logger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -22,6 +19,11 @@ enum class Function{
     BACK,
 }
 
+data class TriviaState(
+    val currentIndex: Int = 0,
+    val correctAnswers: Int = 0
+)
+
 @HiltViewModel
 class QuestionsViewModel @Inject constructor(private val repository: QuestionRepository): ViewModel() {
     val data: MutableState<DataOrException<ArrayList<QuestionModel>, Boolean, Exception>> =
@@ -29,6 +31,7 @@ class QuestionsViewModel @Inject constructor(private val repository: QuestionRep
 
     private val _currentIndex = mutableIntStateOf(0)
     private val _questions = mutableListOf<QuestionModel>()
+    private val _answer = mutableStateOf("")
 
     init {
         getAllQuestions()
@@ -36,6 +39,17 @@ class QuestionsViewModel @Inject constructor(private val repository: QuestionRep
 
     fun questions(): List<QuestionModel> {
         return _questions
+    }
+
+    fun correctAnswer(
+        question: QuestionModel,
+        answer: String,
+    ): Boolean {
+        return question.answer == answer
+    }
+
+    fun currentAnswer(): String {
+        return _answer.value
     }
 
     fun setQuestions(questions: List<QuestionModel>){
@@ -64,14 +78,28 @@ class QuestionsViewModel @Inject constructor(private val repository: QuestionRep
     }
 
     fun toggleQuestions(func: Function){
-        if(func == Function.BACK){
-            if (_currentIndex.intValue > 0) {
-                _currentIndex.intValue -= 1
+        logger("Answer is - ${_answer.value}")
+        if(_answer.value.isNotEmpty()) {
+            if (func == Function.BACK) {
+                logger("Checking back - ${_currentIndex.intValue > 0}")
+                if (_currentIndex.intValue > 0) {
+                    _currentIndex.intValue -= 1
+                }
+            } else {
+                logger("Checking next - ${_currentIndex.intValue < (getMax() - 1)}")
+                if (_currentIndex.intValue < (getMax() - 1)) {
+                    _currentIndex.intValue += 1
+                }
             }
-        } else {
-            if (_currentIndex.intValue < (getMax() - 1)) {
-                _currentIndex.intValue -= 1
-            }
+            _answer.value = ""
         }
+    }
+
+    fun setAnswer(answer: String) {
+        _answer.value = answer
+    }
+
+    fun getCurrentIndex(): Int {
+        return _currentIndex.intValue
     }
 }
